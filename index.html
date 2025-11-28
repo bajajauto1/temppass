@@ -8,6 +8,13 @@
 <!-- Tailwind -->
 <script src="https://cdn.tailwindcss.com"></script>
 
+<!-- EmailJS -->
+<script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+<script>
+  // ⬇️ Add your EmailJS PUBLIC KEY here
+  emailjs.init("IE306QDmsBahHbXdx");
+</script>
+
 <style>
   body {
     background: #f3f4f6;
@@ -54,8 +61,8 @@
 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
 <!-- ============================
-     USER FORM (EMAIL REMOVED)
-============================= -->
+     USER FORM
+============================== -->
 <section class="app-card">
   <h2 class="app-title mb-3">Travel Request (User)</h2>
 
@@ -114,7 +121,7 @@
 
 <!-- ============================
        ADMIN PANEL
-============================= -->
+============================== -->
 <section class="app-card">
   <h2 class="app-title mb-3">Admin Panel</h2>
 
@@ -194,7 +201,7 @@ const db = firebase.database();
 function $(id){ return document.getElementById(id); }
 function showMsg(el,msg){ el.textContent=msg; setTimeout(()=>el.textContent="",3000); }
 
-/* USER FORM (EMAIL + NOTES REMOVED) */
+/* USER FORM — NOW WITH EMAILJS */
 $('requestForm').addEventListener('submit', async (e)=>{
   e.preventDefault();
 
@@ -214,6 +221,18 @@ $('requestForm').addEventListener('submit', async (e)=>{
 
   try{
     await db.ref("requests").push(data);
+
+    // ⬇️ EMAILJS NOTIFICATION TO ADMIN
+    emailjs.send("service_uqlwhdy", "template_n1jv0pk", {
+      req_date: data.req_date,
+      travel_on: data.travel_on,
+      name: data.name,
+      phone: data.phone,
+      route: data.route,
+      shift: data.shift,
+      ticket_no: data.ticket_no
+    });
+
     showMsg($('formMsg'),"Submitted!");
     $('requestForm').reset();
   }catch(err){ console.log(err); }
@@ -341,5 +360,3 @@ $('exportBtn').onclick = ()=>{
 </script>
 </body>
 </html>
-
-
