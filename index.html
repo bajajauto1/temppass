@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Transport Request System</title>
+  <!-- Tailwind CDN for quick modern styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* small extra styling */
+    .bg-card { background: linear-gradient(180deg, rgba(255,255,255,0.8), rgba(250,250,251,0.8)); }
+    .table-scroll { max-height: 60vh; overflow:auto; }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-800">
+  <div class="max-w-5xl mx-auto p-4">
+    <header class="flex items-center justify-between py-4">
+      <h1 class="text-2xl font-semibold">Transport Request Portal</h1>
+      <div class="text-sm text-slate-600">Mobile-friendly • Firebase Realtime DB • Admin approvals</div>
+    </header>
+
+    <main class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- User Form -->
+      <section class="bg-card rounded-2xl p-4 shadow-md">
+        <h2 class="text-lg font-medium mb-2">Request Travel (User)</h2>
+        <p class="text-sm text-slate-600 mb-4">Fill this form to request travel — admin will approve/reject and notify you by WhatsApp.</p>
+
+        <form id="requestForm" class="space-y-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <label class="block">
+              <span class="text-xs text-slate-700">Date (request)</span>
+              <input id="req_date" type="date" required class="mt-1 block w-full rounded border p-2" />
+            </label>
+
+            <label class="block">
+              <span class="text-xs text-slate-700">Travel On (date)</span>
+              <input id="travel_on" type="date" required class="mt-1 block w-full rounded border p-2" />
+            </label>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <label class="block">
+              <span class="text-xs text-slate-700">Employee Name</span>
+              <input id="name" type="text" placeholder="Full name" required class="mt-1 block w-full rounded border p-2" />
+            </label>
+
+            <label class="block">
+              <span class="text-xs text-slate-700">Employee Email</span>
+              <input id="email" type="email" placeholder="you@example.com" required class="mt-1 block w-full rounded border p-2" />
+            </label>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <label class="block">
+              <span class="text-xs text-slate-700">Phone (WhatsApp)</span>
+              <input id="phone" type="tel" placeholder="Country code + number (e.g. 919876543210)" required class="mt-1 block w-full rounded border p-2" />
+            </label>
+
+            <label class="block">
+              <span class="text-xs text-slate-700">Bus Route</span>
+              <input id="route" type="text" placeholder="Route name/number" required class="mt-1 block w-full rounded border p-2" />
+            </label>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <label class="block">
+              <span class="text-xs text-slate-700">Shift</span>
+              <input id="shift" type="text" placeholder="Morning / Evening" required class="mt-1 block w-full rounded border p-2" />
+            </label>
+
+            <label class="block">
+              <span class="text-xs text-slate-700">Ticket No.</span>
+              <input id="ticket_no" type="text" placeholder="Ticket number" required class="mt-1 block w-full rounded border p-2" />
+            </label>
+          </div>
+
+          <label class="block">
+            <span class="text-xs text-slate-700">Additional Notes (optional)</span>
+            <textarea id="notes" rows="2" class="mt-1 block w-full rounded border p-2" placeholder="Any extra info"></textarea>
+          </label>
+
+          <div class="flex items-center gap-2">
+            <button id="submitBtn" class="bg-emerald-600 text-white px-4 py-2 rounded shadow hover:opacity-95">Submit Request</button>
+            <button id="clearBtn" type="button" class="text-sm text-slate-600 px-3 py-2 rounded border">Clear</button>
+            <div id="formMsg" class="text-sm text-slate-600"></div>
+          </div>
+        </form>
+
+      </section>
+
+      <!-- Admin Panel (auth + controls) -->
+      <section class="bg-card rounded-2xl p-4 shadow-md">
+        <h2 class="text-lg font-medium mb-2">Admin Panel</h2>
+        <p class="text-sm text-slate-600 mb-4">Sign in with your Firebase Email & Password account to view, approve or reject requests.</p>
+
+        <div id="authArea" class="space-y-3">
+          <button id="logoutBtn" class="bg-red-500 text-white px-4 py-2 rounded hidden mb-3">Logout</button>
+          <div id="signinBox">
+            <label class="block">
+              <span class="text-xs text-slate-700">Admin Email</span>
+              <input id="adminEmail" type="email" class="mt-1 block w-full rounded border p-2" />
+            </label>
+            <label class="block">
+              <span class="text-xs text-slate-700">Password</span>
+              <input id="adminPass" type="password" class="mt-1 block w-full rounded border p-2" />
+            </label>
+            <div class="flex items-center gap-2">
+              <button id="loginBtn" class="bg-sky-600 text-white px-4 py-2 rounded">Sign in</button>
+              
+              <span id="authMsg" class="text-sm text-slate-600"></span>
+            </div>
+          </div>
+
+          <div id="adminControls" class="hidden">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <button id="refreshBtn" class="px-3 py-2 rounded border">Refresh</button>
+                <button id="exportBtn" class="px-3 py-2 rounded border">Export CSV</button>
+              </div>
+              <div class="text-sm text-slate-600">Logged in as <span id="adminUserEmail" class="font-medium"></span></div>
+            </div>
+
+            <div class="table-scroll border rounded">
+              <table class="w-full text-sm table-auto">
+                <thead class="sticky top-0 bg-white">
+                  <tr>
+                    <th class="p-2">Request Date</th>
+                    <th class="p-2">Name</th>
+                    <th class="p-2">Email / Phone</th>
+                    <th class="p-2">Route</th>
+                    <th class="p-2">Shift</th>
+                    <th class="p-2">Ticket</th>
+                    <th class="p-2">Travel On</th>
+                    <th class="p-2">Status</th>
+                    <th class="p-2">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="requestsTbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="mt-6 text-xs text-slate-500">Note: Replace the Firebase config object below with your project's config and enable Email/Password auth and Realtime Database in your Firebase console.</footer>
+  </div>
+
+
+  <!-- Firebase SDKs (compat style for simplicity) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
+  <script>
+    // =======================
+    // IMPORTANT: paste your Firebase config here (replace the placeholder object)
+    // You can find this in Firebase console > Project settings > SDK setup
+    // Example:
+    // const firebaseConfig = { apiKey: "...", authDomain: "...", databaseURL: "https://...firebaseio.com", projectId: "...", storageBucket: "...", messagingSenderId: "...", appId: "..." }
+    // =======================
+    const firebaseConfig = {
+        apiKey: "AIzaSyAplJZzrEOV244rGi1hBe-MWNKdC21C0Ac",
+  authDomain: "newdb-9bb7d.firebaseapp.com",
+  databaseURL: "https://newdb-9bb7d-default-rtdb.firebaseio.com",
+  projectId: "newdb-9bb7d",
+  storageBucket: "newdb-9bb7d.firebasestorage.app",
+  messagingSenderId: "43095744350",
+  appId: "1:43095744350:web:b5799aef815d5a8cb539cf",
+  measurementId: "G-50NM4XY0F6"
+      // <-- PASTE YOUR FIREBASE CONFIG OBJECT HERE -->
+    };
+
+    // Init
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    // ----- Helper utilities -----
+    function $(id){ return document.getElementById(id); }
+
+    function showMsg(el, msg, timeout=3500){ el.textContent = msg; setTimeout(()=>{ if(el.textContent===msg) el.textContent=''; }, timeout); }
+
+    // ----- User form submit -----
+    const form = $('requestForm');
+    form.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const data = {
+        req_date: $('req_date').value || new Date().toISOString().slice(0,10),
+        travel_on: $('travel_on').value,
+        name: $('name').value.trim(),
+        email: $('email').value.trim(),
+        phone: $('phone').value.trim().replace(/\D/g,''),
+        route: $('route').value.trim(),
+        shift: $('shift').value.trim(),
+        ticket_no: $('ticket_no').value.trim(),
+        notes: $('notes').value.trim(),
+        status: 'pending',
+        createdAt: Date.now()
+      };
+
+      // Basic validation
+      if(!data.phone){ showMsg($('formMsg'), 'Please provide phone number'); return; }
+
+      try{
+        const newRef = db.ref('requests').push();
+        await newRef.set(data);
+        showMsg($('formMsg'), 'Request submitted — you will be notified after approval.');
+        form.reset();
+      } catch(err){ console.error(err); showMsg($('formMsg'), 'Submit failed. Check console.'); }
+    });
+
+    $('clearBtn').addEventListener('click', ()=> form.reset() );
+
+    // ----- Admin auth -----
+    const loginBtn = $('loginBtn');
+    const logoutBtn = $('logoutBtn');
+    const authMsg = $('authMsg');
+    const adminControls = $('adminControls');
+    const adminEmailSpan = $('adminUserEmail');
+
+    loginBtn.addEventListener('click', async ()=>{
+      const em = $('adminEmail').value.trim();
+      const pw = $('adminPass').value;
+      if(!em || !pw){ showMsg(authMsg, 'Enter email & password'); return; }
+      try{
+        await auth.signInWithEmailAndPassword(em, pw);
+      }catch(err){ console.error(err); showMsg(authMsg, err.message || 'Sign-in failed'); }
+    });
+
+    logoutBtn.addEventListener('click', async ()=>{ await auth.signOut(); });
+
+    auth.onAuthStateChanged(user=>{
+      if(user){
+        $('signinBox').style.display='none';
+        logoutBtn.classList.remove('hidden');
+        adminControls.classList.remove('hidden');
+        adminEmailSpan.textContent = user.email;
+        fetchAndRenderRequests();
+      } else {
+        $('signinBox').style.display='block';
+        // logout always visible after login
+        logoutBtn.classList.remove('hidden');
+        adminControls.classList.add('hidden');
+        adminEmailSpan.textContent='';
+        $('requestsTbody').innerHTML='';
+      }
+    });
+
+    // ----- Fetch and render requests -----
+    let requestsSnapshot = null;
+    function fetchAndRenderRequests(){
+      const tbody = $('requestsTbody');
+      tbody.innerHTML = '<tr><td class="p-4 text-slate-500">Loading...</td></tr>';
+
+      const ref = db.ref('requests').orderByChild('createdAt');
+      // realtime listener
+      ref.on('value', snap=>{
+        const val = snap.val() || {};
+        requestsSnapshot = val;
+        renderTable(val);
+      });
+    }
+
+    function formatDate(ts){ try{ const d = new Date(ts); return d.toLocaleString(); }catch(e){ return ts; } }
+
+    function renderTable(dataObj){
+      const tbody = $('requestsTbody');
+      tbody.innerHTML = '';
+      const entries = Object.entries(dataObj || {}).reverse(); // newest first
+      if(entries.length===0){ tbody.innerHTML='<tr><td class="p-4 text-slate-500" colspan="9">No requests</td></tr>'; return; }
+
+      for(const [key, r] of entries){
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="p-2 text-xs">${r.req_date || ''}<br/><span class="text-xxs text-slate-400">${formatDate(r.createdAt)}</span></td>
+          <td class="p-2 text-sm">${escapeHtml(r.name)}</td>
+          <td class="p-2 text-xs">${escapeHtml(r.email)}<br/>${escapeHtml(r.phone)}</td>
+          <td class="p-2 text-xs">${escapeHtml(r.route)}</td>
+          <td class="p-2 text-xs">${escapeHtml(r.shift)}</td>
+          <td class="p-2 text-xs">${escapeHtml(r.ticket_no)}</td>
+          <td class="p-2 text-xs">${escapeHtml(r.travel_on)}</td>
+          <td class="p-2 text-xs font-medium">${r.status || 'pending'}</td>
+          <td class="p-2 text-xs">
+            <div class="flex gap-1 flex-wrap">
+              <button data-action="approve" data-key="${key}" class="px-2 py-1 rounded bg-emerald-500 text-white">Approve</button>
+              <button data-action="reject" data-key="${key}" class="px-2 py-1 rounded bg-rose-500 text-white">Reject</button>
+              <button data-action="view" data-key="${key}" class="px-2 py-1 rounded border">View</button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      }
+
+      // attach event listeners
+      tbody.querySelectorAll('button').forEach(btn=>{
+        btn.addEventListener('click', async (e)=>{
+          const action = btn.getAttribute('data-action');
+          const key = btn.getAttribute('data-key');
+          if(action==='view') return showDetails(key);
+          if(action==='approve' || action==='reject') return handleDecision(key, action);
+        });
+      });
+    }
+
+    function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;" }[c])); }
+
+    // ----- Approve/Reject flow -----
+    async function handleDecision(key, action){
+      const node = requestsSnapshot && requestsSnapshot[key];
+      if(!node) { alert('Request not found'); return; }
+      const admin = auth.currentUser ? auth.currentUser.email : 'admin';
+      const newStatus = action === 'approve' ? 'approved' : 'rejected';
+      const updates = {
+        status: newStatus,
+        admin: admin,
+        decisionAt: Date.now()
+      };
+      try{
+        await db.ref('requests/' + key).update(updates);
+        // prepare message template for WhatsApp
+        const phone = node.phone || '';
+        const message = buildMessage(node, newStatus, admin);
+        // Save notification in database (optional) so you have record
+        const notifRef = db.ref('notifications').push();
+        await notifRef.set({ phone, message, createdAt: Date.now(), requestId: key, status: newStatus });
+
+        // Try opening WhatsApp web with prefilled message (this will open in admin browser)
+        if(phone){
+          const waNumber = phone.replace(/\D/g,'');
+          const waUrl = `https://wa.me/${waNumber}?text=` + encodeURIComponent(message);
+          // open in new tab — some browsers may block if not triggered by user gesture; since this is within click handler, it should work
+          window.open(waUrl, '_blank');
+        } else {
+          alert('No phone number for this request.');
+        }
+
+      }catch(err){ console.error(err); alert('Update failed: '+err.message); }
+    }
+
+    function buildMessage(node, status, admin){
+      const lines = [];
+      lines.push(`Hello ${node.name || ''},`);
+      if(status==='approved'){
+        lines.push(`Your travel request for ${node.route || ''} on ${node.travel_on || ''} has been *APPROVED*.`);
+        lines.push(`Shift: ${node.shift || ''} | Ticket No: ${node.ticket_no || ''}`);
+        lines.push('Please carry this message as proof.');
+      } else {
+        lines.push(`Your travel request for ${node.route || ''} on ${node.travel_on || ''} has been *REJECTED*.`);
+        lines.push('For more information contact transport admin.');
+      }
+      lines.push('\nTransport Dept.');
+      lines.push(`Approved/Rejected by: ${admin}`);
+      return lines.join('\n');
+    }
+
+    function showDetails(key){
+      const node = requestsSnapshot && requestsSnapshot[key];
+      if(!node) return alert('Not found');
+      const msg = Object.entries(node).map(([k,v])=>`${k}: ${v}`).join('\n');
+      alert(msg);
+    }
+
+    // ----- CSV export -----
+    $('exportBtn').addEventListener('click', ()=>{
+      const rows = [];
+      if(!requestsSnapshot){ alert('No data'); return; }
+      rows.push(['id','req_date','createdAt','name','email','phone','route','shift','ticket_no','travel_on','status','notes','admin','decisionAt']);
+      for(const [k, r] of Object.entries(requestsSnapshot)){
+        rows.push([
+          k,
+          r.req_date || '',
+          r.createdAt || '',
+          r.name || '',
+          r.email || '',
+          r.phone || '',
+          r.route || '',
+          r.shift || '',
+          r.ticket_no || '',
+          r.travel_on || '',
+          r.status || '',
+          (r.notes||'').replace(/\n/g,' '),
+          r.admin || '',
+          r.decisionAt || ''
+        ]);
+      }
+      const csv = rows.map(r=>r.map(cell=>`"${String(cell).replace(/"/g,'""')}"`).join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'transport_requests.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    });
+
+    // simple refresh handler
+    $('refreshBtn').addEventListener('click', ()=> fetchAndRenderRequests() );
+
+    // friendly note: ensure realtime DB rules allow authenticated admins to read/write 'requests' and 'notifications' nodes
+
+  </script>
+</body>
+</html>
