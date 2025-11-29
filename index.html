@@ -12,7 +12,7 @@
 <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
 <script>
   // ⬇️ Add your EmailJS PUBLIC KEY here
-  emailjs.init("Z0sWZaD-Eyql-5z0r");
+  emailjs.init("YS16CFU4zL8YTP9vn");
 </script>
 
 <style>
@@ -223,7 +223,7 @@ $('requestForm').addEventListener('submit', async (e)=>{
     await db.ref("requests").push(data);
 
     // ⬇️ EMAILJS NOTIFICATION TO ADMIN
-    emailjs.send("service_10rbi6e","template_b5f0qcm", {
+    emailjs.send("service_bgg3m5q","template_kjun9hc", {
       req_date: data.req_date,
       travel_on: data.travel_on,
       name: data.name,
@@ -360,5 +360,6 @@ $('exportBtn').onclick = ()=>{
 </script>
 </body>
 </html>
+
 
 
